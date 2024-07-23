@@ -153,7 +153,7 @@ export class TexMap extends Model {
 			-1, 1, 0, 0, 1,
 		]);
 
-		this.vbo = Model.createBuffer(data, this.gl.STATIC_DRAW, this.gl);
+		this.vbo = Model.createBuffer(this.gl, data, this.gl.STATIC_DRAW);
 		this.vao = Model.createVertexArray(this.gl);
 
 		this.gl.enableVertexAttribArray(0);

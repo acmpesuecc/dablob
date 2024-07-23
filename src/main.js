@@ -1,10 +1,15 @@
 import Shader from "./Shader";
 import Model from "./Model"
+import { TexMap } from "./Model";
+import Texture from "./Texture"
+import Framebuffer from "./Framebuffer"
 
 import updateVS from "./shaders/updateVS.glsl";
 import updateFS from "./shaders/updateFS.glsl";
 import drawVS from "./shaders/drawVS.glsl";
 import drawFS from "./shaders/drawFS.glsl";
+import copyVS from "./shaders/copyVS.glsl";
+import copyFS from "./shaders/copyFS.glsl";
 
 const canvas = document.querySelector("#glcanvas");
 const fpsElem = document.querySelector("#fps");
@@ -22,11 +27,43 @@ if (gl === null) {
 	const updateFragmentShader = Shader.compileShader(gl, updateFS, gl.FRAGMENT_SHADER);
 	const drawVertexShader = Shader.compileShader(gl, drawVS, gl.VERTEX_SHADER);
 	const drawFragmentShader = Shader.compileShader(gl, drawFS, gl.FRAGMENT_SHADER);
+	const copyVertexShader = Shader.compileShader(gl, copyVS, gl.VERTEX_SHADER);
+	const copyFragmentShader = Shader.compileShader(gl, copyFS, gl.FRAGMENT_SHADER);
 
 	const updateProgram = new Shader(gl);
 	updateProgram.createShaders(updateVertexShader, updateFragmentShader, ['newPosition']);
 	const drawProgram = new Shader(gl);
 	drawProgram.createShaders(drawVertexShader, drawFragmentShader);
+	const copyProgram = new Shader(gl);
+	copyProgram.createShaders(copyVertexShader, copyFragmentShader);
+
+
+	// TEXTURE
+	var texture1 = new Texture(gl, 0);
+	texture1.createEmptyTex(resolution[0], resolution[1]);
+
+	var texture2 = new Texture(gl, 1);
+	texture2.createEmptyTex(resolution[0], resolution[1]);
+
+	// FB
+	const fb = new Framebuffer(gl);
+	fb.createFramebuff(texture1.texture, resolution[0], resolution[1]);
+
+	function swapTextures() {
+		let temp = texture1;
+		texture1 = texture2;
+		texture2 = temp;
+
+		texture1.unit = 0;
+		texture1.bind();
+		texture2.unit = 1;
+		texture2.bind();
+		fb.setTexture(texture1.texture);
+	}
+
+	// MODEL
+	const model = new TexMap(gl);
+	model.setup();
 
 	// DATA
 	const rand = (min, max) => {
@@ -42,7 +79,7 @@ if (gl === null) {
 			ranges.map(range => rand(...range))
 		).flat();
 
-	const numParticles = 100000;
+	const numParticles = 10;
 
 	const positions = new Float32Array(createPoints(numParticles, [[-1, 1], [-1, 1]]));
 	const velocities = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
@@ -74,11 +111,18 @@ if (gl === null) {
 		velocity: gl.getAttribLocation(updateProgram.program, 'velocity'),
 		canvasDimensions: gl.getUniformLocation(updateProgram.program, 'canvasDimensions'),
 		deltaTime: gl.getUniformLocation(updateProgram.program, 'deltaTime'),
+
 	};
 
 	const drawParticlesProgLocs = {
 		position: gl.getAttribLocation(drawProgram.program, 'position'),
 	};
+
+	const copyProgLocs = {
+		uSampler: gl.getUniformLocation(drawProgram.program, "uSampler"),
+	};
+
+
 	const updatePositionVAO1 = makeVertexArray(gl, [
 		[position1Buffer, updatePositionPrgLocs.oldPosition],
 		[velocityBuffer, updatePositionPrgLocs.velocity],
@@ -117,10 +161,13 @@ if (gl === null) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, null);
 	gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
 
-	gl.useProgram(updateProgram.program);
-	gl.uniform2f(updatePositionPrgLocs.canvasDimensions, canvas.width, canvas.height);
+	gl.useProgram(copyProgram.program)
+	gl.uniform1i(copyProgLocs.uSampler, 1);
 
-	gl.clearColor(1, 1, 1, 1);
+	gl.useProgram(updateProgram.program);
+	gl.uniform2f(updatePositionPrgLocs.canvasDimensions, resolution[0], resolution[1]);
+
+	gl.clearColor(0, 0, 0, 0);
 
 	let lastTime = performance.now() * .001;
 	function renderLoop() {
@@ -146,9 +193,13 @@ if (gl === null) {
 
 		gl.disable(gl.RASTERIZER_DISCARD);
 
+
+		fb.bind();
 		gl.useProgram(drawProgram.program);
 		gl.bindVertexArray(current.drawVA);
-		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		gl.viewport(0, 0, resolution[0], resolution[1]);
+		//gl.clearColor(0, 0, 0, 0);
+		//gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, numParticles);
 
 		{
@@ -156,6 +207,15 @@ if (gl === null) {
 			current = next;
 			next = temp;
 		}
+
+		swapTextures();
+		fb.unbind();
+
+		gl.useProgram(copyProgram.program);
+		gl.viewport(0, 0, resolution[0], resolution[1]);
+		gl.clearColor(0, 0, 0, 0);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		model.render();
 
 		requestAnimationFrame(renderLoop);
 	}
