@@ -79,7 +79,7 @@ if (gl === null) {
 			ranges.map(range => rand(...range))
 		).flat();
 
-	const numParticles = 10;
+	const numParticles = 1000000;
 
 	const positions = new Float32Array(createPoints(numParticles, [[-1, 1], [-1, 1]]));
 	const velocities = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
@@ -185,7 +185,7 @@ if (gl === null) {
 
 		gl.enable(gl.RASTERIZER_DISCARD);
 
-		gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, current.tf);
+		gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, current.tf)
 		gl.beginTransformFeedback(gl.POINTS);
 		gl.drawArrays(gl.POINTS, 0, numParticles);
 		gl.endTransformFeedback();
@@ -198,8 +198,8 @@ if (gl === null) {
 		gl.useProgram(drawProgram.program);
 		gl.bindVertexArray(current.drawVA);
 		gl.viewport(0, 0, resolution[0], resolution[1]);
-		//gl.clearColor(0, 0, 0, 0);
-		//gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		gl.clearColor(0, 0, 0, 0);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, numParticles);
 
 		{
