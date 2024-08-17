@@ -17,6 +17,16 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const resolution = [canvas.width, canvas.height];
 
+// struct SpeciesSettings {
+//     float moveSpeed;
+//     float turnSpeed;
+//     float sensorAngleOffset;
+//     float sensorOffsetDst;
+//     int sensorSize;
+//     int agentSize;
+//     Color color;
+// };
+
 const gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("webgl2"));
 
 if (gl === null) {
@@ -73,95 +83,38 @@ if (gl === null) {
 		return Math.random() * (max - min) + min;
 	};
 
-	const createInterleavedPoints = (num, ranges) => {
-		return new Array(num).fill(0).map(() => {
-			const position = ranges[0].map(range => rand(...range));
-			const velocity = ranges[1].map(range => rand(...range));
-			return [...position, ...velocity];
-		}).flat();
-	};
+	const createPoints = (num, ranges) =>
+		new Array(num).fill(0).map(() =>
+			ranges.map(range => rand(...range))
+		).flat();
 
-	const numParticles = 10;
+	const numParticles = 1000000;
 
-	// const ranges = [
-	// 	[[-1, 1], [-1, 1]],
-	// 	[[-0.1, 0.1], [-0.1, 0.1]]
-	// ];
-	// const interleavedData = new Float32Array(createInterleavedPoints(numParticles, ranges));
+	const positions = new Float32Array(createPoints(numParticles, [[-1, 1], [-1, 1]]));
+	const velocities = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
 
-	const interleavedData = new Float32Array([
-		0.5, 0.2, 0.01, -0.02,
-		-0.3, 0.8, 0.03, -0.01,
-		0.1, -0.4, -0.02, 0.04,
-		0.9, -0.7, 0.01, 0.01,
-		-0.6, 0.3, -0.03, -0.02,
-		0.4, 0.9, 0.02, -0.03,
-		-0.8, -0.5, 0.03, 0.01,
-		0.6, -0.3, -0.01, -0.02,
-		-0.2, 0.7, 0.02, 0.02,
-		0.3, -0.6, -0.03, 0.01
-	]);
+	// BUFF
+	const position1Buffer = Model.createBuffer(gl, positions, gl.DYNAMIC_DRAW);
+	const position2Buffer = Model.createBuffer(gl, positions, gl.DYNAMIC_DRAW);
+	const velocityBuffer = Model.createBuffer(gl, velocities, gl.STATIC_DRAW);
 
-	// BUFFER
-	const interleavedBuffer1 = Model.createBuffer(gl, interleavedData, gl.DYNAMIC_DRAW);
-	const interleavedBuffer2 = Model.createBuffer(gl, interleavedData, gl.DYNAMIC_DRAW);
-
-	// VAO SEUP
-	function makeUpdateVertexArray(gl, buffer) {
+	function makeVertexArray(gl, bufLocPairs) {
 		const va = gl.createVertexArray();
 		gl.bindVertexArray(va);
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-		const stride = 4 * 4;
-
-		// Position attribute
-		gl.enableVertexAttribArray(updatePositionPrgLocs.oldPosition);
-		gl.vertexAttribPointer(
-			updatePositionPrgLocs.oldPosition,
-			2,
-			gl.FLOAT,
-			false,
-			stride,
-			0
-		);
-
-		// Velocity attribute
-		gl.enableVertexAttribArray(updatePositionPrgLocs.velocity);
-		gl.vertexAttribPointer(
-			updatePositionPrgLocs.velocity,
-			2,
-			gl.FLOAT,
-			false,
-			stride,
-			2 * 4
-		);
-
+		for (const [buffer, loc] of bufLocPairs) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+			gl.enableVertexAttribArray(loc);
+			gl.vertexAttribPointer(
+				loc,      // attribute location
+				2,        // number of elements
+				gl.FLOAT, // type of data
+				false,    // normalize
+				0,        // stride (0 = auto)
+				0,        // offset
+			);
+		}
 		return va;
 	}
-
-	function makeDrawVertexArray(gl, buffer) {
-		const va = gl.createVertexArray();
-		gl.bindVertexArray(va);
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-		const stride = 4 * 4;
-
-		// Position attribute
-		gl.enableVertexAttribArray(drawParticlesProgLocs.position);
-		gl.vertexAttribPointer(
-			drawParticlesProgLocs.position,
-			2,
-			gl.FLOAT,
-			false,
-			stride,
-			0
-		);
-
-		return va;
-	}
-
 	const updatePositionPrgLocs = {
 		oldPosition: gl.getAttribLocation(updateProgram.program, 'oldPosition'),
 		velocity: gl.getAttribLocation(updateProgram.program, 'velocity'),
@@ -177,9 +130,17 @@ if (gl === null) {
 		uSampler: gl.getUniformLocation(drawProgram.program, "uSampler"),
 	};
 
-	const updatePositionVAO1 = makeUpdateVertexArray(gl, interleavedBuffer1);
-	const updatePositionVAO2 = makeUpdateVertexArray(gl, interleavedBuffer2);
-	const drawVAO = makeDrawVertexArray(gl, interleavedBuffer1);
+
+	const updatePositionVAO1 = makeVertexArray(gl, [
+		[position1Buffer, updatePositionPrgLocs.oldPosition],
+		[velocityBuffer, updatePositionPrgLocs.velocity],
+	]);
+	const updatePositionVAO2 = makeVertexArray(gl, [
+		[position2Buffer, updatePositionPrgLocs.oldPosition],
+		[velocityBuffer, updatePositionPrgLocs.velocity],
+	]);
+	const drawVAO = makeVertexArray(
+		gl, [[position1Buffer, drawParticlesProgLocs.position]]);
 
 	function makeTransformFeedback(gl, buffer) {
 		const tf = gl.createTransformFeedback();
@@ -188,8 +149,8 @@ if (gl === null) {
 		return tf;
 	}
 
-	const tf1 = makeTransformFeedback(gl, interleavedBuffer1);
-	const tf2 = makeTransformFeedback(gl, interleavedBuffer2);
+	const tf1 = makeTransformFeedback(gl, position1Buffer);
+	const tf2 = makeTransformFeedback(gl, position2Buffer);
 
 	let current = {
 		updateVA: updatePositionVAO1,
