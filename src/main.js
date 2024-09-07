@@ -8,6 +8,8 @@ import updateVS from "./shaders/updateVS.glsl";
 import updateFS from "./shaders/updateFS.glsl";
 import drawVS from "./shaders/drawVS.glsl";
 import drawFS from "./shaders/drawFS.glsl";
+import postVS from "./shaders/postVS.glsl";
+import postFS from "./shaders/postFS.glsl";
 import copyVS from "./shaders/copyVS.glsl";
 import copyFS from "./shaders/copyFS.glsl";
 
@@ -27,6 +29,8 @@ if (gl === null) {
 	const updateFragmentShader = Shader.compileShader(gl, updateFS, gl.FRAGMENT_SHADER);
 	const drawVertexShader = Shader.compileShader(gl, drawVS, gl.VERTEX_SHADER);
 	const drawFragmentShader = Shader.compileShader(gl, drawFS, gl.FRAGMENT_SHADER);
+	const postVertexShader = Shader.compileShader(gl, postVS, gl.VERTEX_SHADER);
+	const postFragmentShader = Shader.compileShader(gl, postFS, gl.FRAGMENT_SHADER);
 	const copyVertexShader = Shader.compileShader(gl, copyVS, gl.VERTEX_SHADER);
 	const copyFragmentShader = Shader.compileShader(gl, copyFS, gl.FRAGMENT_SHADER);
 
@@ -34,6 +38,8 @@ if (gl === null) {
 	updateProgram.createShaders(updateVertexShader, updateFragmentShader, ['newPosition','newAngle']);
 	const drawProgram = new Shader(gl);
 	drawProgram.createShaders(drawVertexShader, drawFragmentShader);
+	const postProgram = new Shader(gl);
+	postProgram.createShaders(postVertexShader, postFragmentShader);
 	const copyProgram = new Shader(gl);
 	copyProgram.createShaders(copyVertexShader, copyFragmentShader);
 
@@ -57,7 +63,7 @@ if (gl === null) {
 		texture1.bind();
 		texture2.unit = 1;
 		texture2.bind();
-		fb.setTexture(texture1.texture);
+		fb.setTexture(texture2.texture);
 	}
 
 	// MODEL
@@ -78,9 +84,9 @@ if (gl === null) {
 			ranges.map(range => rand(...range))
 		).flat();
 
-	const numParticles = 500000;
+	const numParticles = 50000;
 
-	const positions = new Float32Array(createPoints(numParticles, [[-1, 1], [-1, 1]]));
+	const positions = new Float32Array(createPoints(numParticles, [[-.5, .5], [-.5, .5]]));
 	const angles = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
 
 	// BUFF
@@ -116,6 +122,10 @@ if (gl === null) {
 
 	const drawProgLocs = {
 		position: gl.getAttribLocation(drawProgram.program, 'position'),
+	};
+	const postProgLocs = {
+		position: gl.getAttribLocation(postProgram.program, 'uSampler'),
+		canvasDimensions: gl.getUniformLocation(postProgram.program, 'canvasDimensions'),
 	};
 
 	const copyProgLocs = {
@@ -164,6 +174,10 @@ if (gl === null) {
 	gl.useProgram(copyProgram.program)
 	gl.uniform1i(copyProgLocs.uSampler, 1);
 
+	gl.useProgram(postProgram.program)
+	gl.uniform1i(postProgram.uSampler, 1);
+	gl.uniform2f(postProgram.canvasDimensions, resolution[0], resolution[1]);
+
 	gl.useProgram(updateProgram.program);
 	gl.uniform1i(updateProgLocs.uSampler, 1);
 	gl.uniform2f(updateProgLocs.canvasDimensions, resolution[0], resolution[1]);
@@ -180,6 +194,7 @@ if (gl === null) {
 
 		gl.clear(gl.COLOR_BUFFER_BIT);
 
+		// update program call
 		gl.useProgram(updateProgram.program);
 		gl.bindVertexArray(current.updateVA);
 		gl.uniform1f(updateProgLocs.deltaTime, deltaTime);
@@ -195,14 +210,12 @@ if (gl === null) {
 		gl.disable(gl.RASTERIZER_DISCARD);
 
 
+		// render to framebuffer
 		fb.bind();
 		gl.useProgram(drawProgram.program);
 		gl.bindVertexArray(current.drawVA);
 		gl.viewport(0, 0, resolution[0], resolution[1]);
-		gl.clearColor(0, 0, 0, 0);
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, numParticles);
-
 		{
 			const temp = current;
 			current = next;
@@ -212,6 +225,14 @@ if (gl === null) {
 		swapTextures();
 		fb.unbind();
 
+		// post program call
+		fb.bind()
+		gl.useProgram(postProgram.program);
+		model.render();
+		fb.unbind();
+
+
+		// render texture
 		gl.useProgram(copyProgram.program);
 		gl.viewport(0, 0, resolution[0], resolution[1]);
 		gl.clearColor(0, 0, 0, 0);
