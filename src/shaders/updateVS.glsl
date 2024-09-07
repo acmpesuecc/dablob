@@ -35,7 +35,7 @@ float sense(vec2 position, float sensorAngle) {
     vec2 sensorDir = vec2(cos(sensorAngle), sin(sensorAngle));
     vec2 sensorCenter = position + sensorDir * sensorOffsetDist;
     vec2 sensorUV = (sensorCenter + 1.0) / 2.0;
-    vec4 s = textureLod(uSampler, sensorUV,sensorSize);
+    vec4 s = textureLod(uSampler, sensorUV ,sensorSize);
     return s.r;
 }
 

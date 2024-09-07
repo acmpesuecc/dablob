@@ -8,7 +8,7 @@ out vec4 fragColor;
 
 uniform sampler2D uSampler;
 uniform vec2 canvasDimensions;
-const float decayFactor = 0.005;
+const float decayFactor = 0.02;
 
 void main() {
     vec4 texColor = texture(uSampler, vCoord);

@@ -84,7 +84,7 @@ if (gl === null) {
 			ranges.map(range => rand(...range))
 		).flat();
 
-	const numParticles = 50000;
+	const numParticles = 500000;
 
 	const positions = new Float32Array(createPoints(numParticles, [[-.5, .5], [-.5, .5]]));
 	const angles = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
@@ -215,6 +215,8 @@ if (gl === null) {
 		gl.useProgram(drawProgram.program);
 		gl.bindVertexArray(current.drawVA);
 		gl.viewport(0, 0, resolution[0], resolution[1]);
+		// gl.clearColor(0, 0, 0, 0);
+		// gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, numParticles);
 		{
 			const temp = current;
