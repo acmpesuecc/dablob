@@ -12,10 +12,10 @@ out vec2 newAngle;
 
 #define PI radians(180.0)
 const float moveSpeed = 0.05;
-const float turnSpeed = 2.0;
+const float turnSpeed = 5.0;
 const float sensorOffsetDist = 0.1;
 const float sensorAngleSpacing = PI / 4.0;
-const float sensorSize = 1.0;
+const float sensorSize = 4.0;
 
 uint hash(uint s) {
     s ^= 2747636419u;
