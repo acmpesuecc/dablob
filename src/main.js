@@ -86,8 +86,8 @@ if (gl === null) {
 
 	const numParticles = 500000;
 
-	const positions = new Float32Array(createPoints(numParticles, [[-.01, .01], [-.01, .01]]));
-	const angles = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
+	const positions = new Float32Array(createPoints(numParticles, [[-.1, .1], [-.1, .1]]));
+	const angles = new Float32Array(createPoints(numParticles, [[.1, .1], [.1, .1]]));
 
 	// BUFF
 	const positionBuffer1 = Model.createBuffer(gl, positions, gl.DYNAMIC_DRAW);
