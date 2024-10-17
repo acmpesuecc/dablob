@@ -17,7 +17,7 @@ out vec2 newAngle;
 // const float sensorAngleSpacing = PI / 4.0;
 // const float sensorSize = 4.0;
 const float moveSpeed = 0.05;
-const float turnSpeed = 30.0;
+const float turnSpeed = 15.0;
 const float sensorOffsetDist = 0.01;
 const float sensorAngleSpacing = PI / 6.0;
 const float sensorSize = 4.0;
