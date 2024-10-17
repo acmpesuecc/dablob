@@ -1,5 +1,5 @@
 # daBlob
-
+[](.md)
 [![GitHub stars](https://img.shields.io/github/stars/neb0lle/dablob)](https://github.com/neb0lle/dablob/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/neb0lle/dablob)](https://github.com/neb0lle/dablob/issues)
 [![GitHub license](https://img.shields.io/github/license/neb0lle/dablob)](https://github.com/neb0lle/dablob/blob/main/LICENSE)
@@ -12,7 +12,7 @@ Simulation of Physarum polycephalum - a type of slime mold, using cellular autom
 
 Before using this project, make sure you have the following dependencies installed on your system:
 
-- [nodejs](https://nodejs.org/en) `>=18.0`
+- [Node.js](https://nodejs.org/en) `>=18.0`
 
 ### Installation & Running
 
